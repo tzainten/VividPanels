@@ -5,6 +5,16 @@ using System.Collections.Generic;
 
 namespace VividPanels;
 
+internal class VividRootPanel : RootPanel
+{
+	protected override void UpdateScale( Rect screenSize )
+	{
+		base.UpdateScale( screenSize );
+
+		Scale = 2f;
+	}
+}
+
 [Title( "Vivid Panel" )]
 [Category( "UI" )]
 [Icon( "panorama_horizontal" )]
@@ -37,7 +47,7 @@ public class VividPanel : Component
 	[Property] internal HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
 	[Property] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
 
-	RootPanel _rootPanel;
+	VividRootPanel _rootPanel;
 	PanelComponent _source;
 
 	Texture _texture;
@@ -56,10 +66,11 @@ public class VividPanel : Component
 	{
 		base.OnStart();
 
-		_rootPanel = new RootPanel
+		_rootPanel = new VividRootPanel
 		{
 			RenderedManually = true,
-			Scene = Scene
+			Scene = Scene,
+			IsWorldPanel = true,
 		};
 
 		_renderObject = new( Scene.SceneWorld )
@@ -173,7 +184,7 @@ public class VividPanel : Component
 			Gizmo.Draw.SolidTriangle( new Triangle( rect.BottomRight, rect.BottomLeft, rect.TopLeft ) );
 		}
 	}
-
+	
 	protected override void OnPreRender()
 	{
 		base.OnPreRender();
@@ -183,18 +194,19 @@ public class VividPanel : Component
 		var rotation = WorldRotation;
 		var position = WorldPosition;
 
+		float uv = 1f / RenderScale;
 		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
 
 		Rect rect = CalculateRect();
 		List<Vertex> vertices =
 		[
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, 1, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), Vector3.Up, Vector3.Forward, new Vector4( 1, 1, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), Vector3.Up, Vector3.Forward, new Vector4( 1, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, uv, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), Vector3.Up, Vector3.Forward, new Vector4( uv, uv, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), Vector3.Up, Vector3.Forward, new Vector4( uv, 0, 0, 0 ) ),
 
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), Vector3.Up, Vector3.Forward, new Vector4( 1, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), Vector3.Up, Vector3.Forward, new Vector4( uv, 0, 0, 0 ) ),
 			new Vertex( position + rotation * ((Vector3)rect.BottomLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, 0, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, 1, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, uv, 0, 0 ) ),
 		];
 
 		int vertexCount = vertices.Count;
