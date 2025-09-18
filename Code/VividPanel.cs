@@ -54,6 +54,8 @@ public class VividPanel : Component
 	CommandList _commands;
 	SceneCustomObject _renderObject;
 
+	bool _hasRendered = false;
+
 	protected override void OnEnabled()
 	{
 		base.OnEnabled();
@@ -131,12 +133,14 @@ public class VividPanel : Component
 		Graphics.Clear();
 
 		_rootPanel.RenderManual();
+		_hasRendered = true;
 
 		Graphics.RenderTarget = null;
 	}
 
 	private void CreateTexture( Vector2 size )
 	{
+		_hasRendered = false;
 		_texture?.Dispose();
 		_texture = Texture.CreateRenderTarget()
 			.WithSize( size )
@@ -216,7 +220,8 @@ public class VividPanel : Component
 		var attributes = _commands.Attributes;
 		attributes.Set( "Panel", _texture );
 
-		_commands.Draw( vertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, vertexCount );
+		if ( _hasRendered )
+			_commands.Draw( vertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, vertexCount );
 	}
 
 	protected override void OnDisabled()
