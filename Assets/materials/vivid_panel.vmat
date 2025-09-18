@@ -1,0 +1,6 @@
+
+Layer0
+{
+	shader "materials/vivid_panel.shader_c"
+
+}
