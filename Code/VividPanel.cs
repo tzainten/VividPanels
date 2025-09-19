@@ -57,6 +57,12 @@ public class VividRenderSystem : GameObjectSystem
 
 internal class VividRootPanel : RootPanel
 {
+	internal Transform Transform;
+
+	internal Rect Rect;
+
+	internal float MaxInteractionDistance;
+
 	protected override void UpdateScale( Rect screenSize )
 	{
 		Scale = 2f;
@@ -65,6 +71,35 @@ internal class VividRootPanel : RootPanel
 	protected override void UpdateBounds( Rect rect )
 	{
 		base.UpdateBounds( rect * Scale );
+	}
+
+	public override bool RayToLocalPosition( Ray ray, out Vector2 position, out float distance )
+	{
+		position = default;
+		distance = 0f;
+
+		Vector3? vector = new Plane( Transform.Position, Transform.Forward ).Trace( in ray, twosided: false, MaxInteractionDistance );
+
+		if ( !vector.HasValue )
+		{
+			return false;
+		}
+
+		distance = Vector3.DistanceBetween( vector.Value, ray.Position );
+		if ( distance < 1f )
+		{
+			return false;
+		}
+
+		Vector3 vector2 = Transform.PointToLocal( vector.Value );
+		Vector2 vector3 = new Vector2( vector2.y, 0f - vector2.z );
+		vector3 /= Sandbox.UI.WorldPanel.ScreenToWorldScale;
+
+		if ( !Rect.IsInside( vector3 ) )
+			return false;
+		position = vector3 - Rect.Position;
+
+		return true;
 	}
 }
 
@@ -99,6 +134,7 @@ public class VividPanel : Component
 	[Property] internal Vector2Int PanelSize { get; set; } = 512;
 	[Property] internal HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
 	[Property] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
+	[Property] internal float InteractionRange { get; set; } = 1000f;
 
 	VividRootPanel _rootPanel;
 	PanelComponent _source;
@@ -126,26 +162,39 @@ public class VividPanel : Component
 		};
 
 		_source = GetComponent<PanelComponent>();
+
+		CreateVertexBuffer();
 	}
 
 	Vector2Int _previousPanelSize;
 	Vector3 _previousPosition;
 	Rotation _previousRotation;
+	HAlignment _previousHAlign;
+	VAlignment _previousVAlign;
 
 	protected override void OnUpdate()
 	{
 		base.OnUpdate();
 
+		_rootPanel.Transform = Transform.World;
+		_rootPanel.MaxInteractionDistance = InteractionRange;
+
 		if ( LookAtCamera )
 		{
-			WorldRotation = Rotation.LookAt( Scene.Camera.WorldRotation.Right, Vector3.Right );
+			WorldRotation = Rotation.LookAt( Scene.Camera.WorldRotation.Backward, Vector3.Up );
 		}
 
-		if ( WorldPosition != _previousPosition || WorldRotation != _previousRotation || PanelSize != _previousPanelSize )
+		if ( WorldPosition != _previousPosition
+			|| WorldRotation != _previousRotation
+			|| PanelSize != _previousPanelSize
+			|| _previousHAlign != HorizontalAlign
+			|| _previousVAlign != VerticalAlign )
 		{
 			_previousPosition = WorldPosition;
 			_previousRotation = WorldRotation;
 			_previousPanelSize = PanelSize;
+			_previousHAlign = HorizontalAlign;
+			_previousVAlign = VerticalAlign;
 
 			CreateVertexBuffer();
 		}
@@ -220,9 +269,9 @@ public class VividPanel : Component
 			.Create();
 	}
 
-	private Rect CalculateRect()
+	internal Rect CalculateRect()
 	{
-		Rect result = new Rect( 0, PanelSize );
+		Rect result = new Rect( (Vector2)0.0, PanelSize );
 		if ( HorizontalAlign == HAlignment.Center )
 		{
 			result.Position -= new Vector2( PanelSize.x * 0.5f, 0f );
@@ -235,16 +284,20 @@ public class VividPanel : Component
 		{
 			result.Position -= new Vector2( 0f, PanelSize.y * 0.5f );
 		}
-		if ( VerticalAlign == VAlignment.Top )
+		if ( VerticalAlign == VAlignment.Bottom )
 		{
 			result.Position -= new Vector2( 0f, PanelSize.y );
 		}
+
+		if ( _rootPanel.IsValid() )
+			_rootPanel.Rect = result;
+
 		return result;
 	}
 
 	protected override void DrawGizmos()
 	{
-		using ( Gizmo.Scope( null, new Transform( 0f, Rotation.Identity, Sandbox.UI.WorldPanel.ScreenToWorldScale ) ) )
+		using ( Gizmo.Scope( null, new Transform( 0f, Rotation.From( 0f, 90f, -90f ), Sandbox.UI.WorldPanel.ScreenToWorldScale ) ) )
 		{
 			Rect rect = CalculateRect();
 			Gizmo.Draw.Line( (Vector3)rect.TopLeft, (Vector3)rect.TopRight );
@@ -259,7 +312,7 @@ public class VividPanel : Component
 
 	void CreateVertexBuffer()
 	{
-		var rotation = WorldRotation;
+		var rotation = WorldRotation * Rotation.From( 0f, 90f, -90f );
 		var position = WorldPosition;
 
 		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
@@ -267,13 +320,13 @@ public class VividPanel : Component
 		Rect rect = CalculateRect();
 		List<Vertex> vertices =
 		[
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 1, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), rotation.Forward, rotation.Up, new Vector4( 1, 1, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( 1, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Right, new Vector4( 0, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomLeft * scale), rotation.Forward, rotation.Right, new Vector4( 0, 1, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Right, new Vector4( 1, 1, 0, 0 ) ),
 
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( 1, 0, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.BottomLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 0, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 1, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Right, new Vector4( 1, 1, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), rotation.Forward, rotation.Right, new Vector4( 1, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Right, new Vector4( 0, 0, 0, 0 ) ),
 		];
 
 		VertexCount = vertices.Count;
