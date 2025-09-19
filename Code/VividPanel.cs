@@ -2,6 +2,7 @@
 using Sandbox.Rendering;
 using Sandbox.UI;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace VividPanels;
@@ -92,11 +93,12 @@ internal class VividRootPanel : RootPanel
 		}
 
 		Vector3 vector2 = Transform.PointToLocal( vector.Value );
-		Vector2 vector3 = new Vector2( vector2.y, 0f - vector2.z );
+		Vector2 vector3 = new Vector2( vector2.y, -vector2.z );
 		vector3 /= Sandbox.UI.WorldPanel.ScreenToWorldScale;
 
 		if ( !Rect.IsInside( vector3 ) )
 			return false;
+
 		position = vector3 - Rect.Position;
 
 		return true;
@@ -291,8 +293,19 @@ public class VividPanel : Component
 			result.Position -= new Vector2( 0f, PanelSize.y );
 		}
 
+		var scale = 1f;
+		if ( Game.IsPlaying && LookAtCamera && ConsistentSize )
+		{
+			float dist = Vector3.DistanceBetween( Scene.Camera.WorldPosition, WorldPosition );
+			scale = dist / 250f;
+			result *= scale;
+		}
+
 		if ( _rootPanel.IsValid() )
+		{
 			_rootPanel.Rect = result;
+			//_rootPanel.Transform.Scale = scale;
+		}
 
 		return result;
 	}
@@ -319,9 +332,6 @@ public class VividPanel : Component
 
 		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
 		float dist = Vector3.DistanceBetween( Scene.Camera.WorldPosition, WorldPosition );
-
-		if ( LookAtCamera && ConsistentSize )
-			scale = dist / 2500f;
 
 		Rect rect = CalculateRect();
 		List<Vertex> vertices =
