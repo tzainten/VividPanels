@@ -144,7 +144,7 @@ public class VividPanel : Component
 			}
 		}
 
-		var scaledSize = (Vector2Int)(Vector2)(PanelSize / RenderScale);
+		var scaledSize = (Vector2Int)(PanelSize / RenderScale);
 		if ( _texture is null || _texture.Size != scaledSize )
 		{
 			CreateTexture( scaledSize );
