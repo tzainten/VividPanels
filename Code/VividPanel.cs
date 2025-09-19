@@ -131,6 +131,7 @@ public class VividPanel : Component
 
 	[Property] internal float RenderScale { get; set; } = 1f;
 	[Property] internal bool LookAtCamera { get; set; } = false;
+	[Property, ShowIf( "LookAtCamera", true )] internal bool ConsistentSize { get; set; } = false;
 	[Property] internal Vector2Int PanelSize { get; set; } = 512;
 	[Property] internal HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
 	[Property] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
@@ -188,7 +189,8 @@ public class VividPanel : Component
 			|| WorldRotation != _previousRotation
 			|| PanelSize != _previousPanelSize
 			|| _previousHAlign != HorizontalAlign
-			|| _previousVAlign != VerticalAlign )
+			|| _previousVAlign != VerticalAlign
+			|| ConsistentSize )
 		{
 			_previousPosition = WorldPosition;
 			_previousRotation = WorldRotation;
@@ -316,6 +318,10 @@ public class VividPanel : Component
 		var position = WorldPosition;
 
 		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
+		float dist = Vector3.DistanceBetweenSquared( Scene.Camera.WorldPosition, WorldPosition );
+
+		if ( LookAtCamera && ConsistentSize )
+			scale += (dist / (5000f * 5000f));
 
 		Rect rect = CalculateRect();
 		List<Vertex> vertices =
