@@ -151,6 +151,8 @@ public class VividPanel : Component
 			return;
 		}
 
+		_rootPanel.PanelBounds = new Rect( 0, scaledSize );
+
 		Graphics.RenderTarget = RenderTarget.From( _texture );
 		Graphics.Attributes.SetCombo( "D_WORLDPANEL", 0 );
 		Graphics.Viewport = new Rect( 0, _rootPanel.PanelBounds.Size );
