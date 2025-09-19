@@ -2,19 +2,11 @@
 using Sandbox.Rendering;
 using Sandbox.UI;
 using System.Collections.Generic;
-using static Sandbox.VertexLayout;
 
 namespace VividPanels;
 
 internal class VividRootPanel : RootPanel
 {
-	internal Transform Transform;
-	internal Vector3 Position => Transform.Position;
-	internal Rotation Rotation => Transform.Rotation;
-	internal float MaxInteractionDistance = 10000f;
-
-	internal float RenderScale;
-
 	protected override void UpdateScale( Rect screenSize )
 	{
 		Scale = 2f;
@@ -23,41 +15,6 @@ internal class VividRootPanel : RootPanel
 	protected override void UpdateBounds( Rect rect )
 	{
 		base.UpdateBounds( rect * Scale );
-	}
-
-	internal Vector3 RayPosition;
-	internal Vector3 RayForward;
-
-	public override bool RayToLocalPosition( Ray ray, out Vector2 position, out float distance )
-	{
-		RayPosition = ray.Position;
-		RayForward = ray.Forward;
-
-		position = default( Vector2 );
-		distance = 0f;
-
-		var plane = new Plane( Position, Rotation.Forward );
-		//Log.Info( plane.IntersectLine( RayPosition, RayPosition + RayForward * 500 ) );
-
-		Vector3? vector = new Plane( Position, Rotation.Forward ).Trace( in ray, twosided: false, MaxInteractionDistance );
-		if ( !vector.HasValue )
-		{
-			return false;
-		}
-		distance = Vector3.DistanceBetween( vector.Value, ray.Position );
-		if ( distance < 1f )
-		{
-			return false;
-		}
-		Vector3 vector2 = Transform.PointToLocal( vector.Value );
-		Vector2 vector3 = new Vector2( vector2.y, 0f - vector2.z );
-		vector3 *= 20f;
-		if ( !IsInside( vector3 ) )
-		{
-			return false;
-		}
-		position = vector3;
-		return true;
 	}
 }
 
@@ -101,6 +58,8 @@ public class VividPanel : Component
 	SceneCustomObject _renderObject;
 
 	bool _hasRendered = false;
+	int _vertexCount;
+	GpuBuffer<Vertex> _vertexBuffer;
 
 	protected override void OnEnabled()
 	{
@@ -129,6 +88,21 @@ public class VividPanel : Component
 		_source = GetComponent<PanelComponent>();
 	}
 
+	Vector3 _previousPosition;
+	Rotation _previousRotation;
+
+	protected override void OnUpdate()
+	{
+		base.OnUpdate();
+
+		if ( WorldPosition != _previousPosition || WorldRotation != _previousRotation )
+		{
+			_previousPosition = WorldPosition;
+			_previousRotation = WorldRotation;
+			CreateVertexBuffer();
+		}
+	}
+
 	protected override void OnDestroy()
 	{
 		base.OnDestroy();
@@ -138,19 +112,6 @@ public class VividPanel : Component
 
 		_rootPanel?.Delete();
 		_rootPanel = null;
-	}
-
-	protected override void OnUpdate()
-	{
-		base.OnUpdate();
-
-		//var transform = Transform.World;
-		//transform.Rotation *= Rotation.From( -90, 90, 0 );
-
-		//DebugOverlay.Line( WorldPosition, WorldPosition + transform.Rotation.Forward * 500 );
-		////DebugOverlay.Line( _rootPanel.RayPosition, _rootPanel.RayPosition + _rootPanel.RayForward * 500, duration: 5f );
-
-		//_rootPanel.Transform = transform;
 	}
 
 	private void OnRender( SceneObject sceneObject )
@@ -187,8 +148,6 @@ public class VividPanel : Component
 			return;
 		}
 
-		Log.Info( _texture.Size );
-
 		Graphics.RenderTarget = RenderTarget.From( _texture );
 		Graphics.Attributes.SetCombo( "D_WORLDPANEL", 0 );
 		Graphics.Viewport = new Rect( 0, _rootPanel.PanelBounds.Size );
@@ -206,9 +165,6 @@ public class VividPanel : Component
 		_texture?.Dispose();
 		_texture = Texture.CreateRenderTarget()
 			.WithSize( size )
-			//.WithScreenFormat()
-			//.WithScreenMultiSample()
-			//.Create();
 			.WithDynamicUsage()
 			.WithUAVBinding()
 			.Create();
@@ -250,40 +206,42 @@ public class VividPanel : Component
 			Gizmo.Draw.SolidTriangle( new Triangle( rect.BottomRight, rect.BottomLeft, rect.TopLeft ) );
 		}
 	}
-	
+
+	void CreateVertexBuffer()
+	{
+		var rotation = WorldRotation;
+		var position = WorldPosition;
+
+		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
+
+		Rect rect = CalculateRect();
+		List<Vertex> vertices =
+		[
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 1, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), rotation.Forward, rotation.Up, new Vector4( 1, 1, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( 1, 0, 0, 0 ) ),
+
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( 1, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 1, 0, 0 ) ),
+		];
+
+		_vertexCount = vertices.Count;
+		_vertexBuffer = new GpuBuffer<Vertex>( _vertexCount, GpuBuffer.UsageFlags.Vertex );
+		_vertexBuffer.SetData( vertices );
+	}
+
 	protected override void OnPreRender()
 	{
 		base.OnPreRender();
 
 		_commands.Reset();
 
-		var rotation = WorldRotation;
-		var position = WorldPosition;
-
-		float uv = 1f;
-		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
-
-		Rect rect = CalculateRect();
-		List<Vertex> vertices =
-		[
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, uv, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), rotation.Forward, rotation.Up, new Vector4( uv, uv, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( uv, 0, 0, 0 ) ),
-
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( uv, 0, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.BottomLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 0, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, uv, 0, 0 ) ),
-		];
-
-		int vertexCount = vertices.Count;
-		var vertexBuffer = new GpuBuffer<Vertex>( vertexCount, GpuBuffer.UsageFlags.Vertex );
-		vertexBuffer.SetData( vertices );
-
 		var attributes = _commands.Attributes;
 		attributes.Set( "Panel", _texture );
 
 		if ( _hasRendered )
-			_commands.Draw( vertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, vertexCount );
+			_commands.Draw( _vertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, _vertexCount );
 	}
 
 	protected override void OnDisabled()
