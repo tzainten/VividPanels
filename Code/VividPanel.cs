@@ -88,6 +88,7 @@ public class VividPanel : Component
 		_source = GetComponent<PanelComponent>();
 	}
 
+	Vector2Int _previousPanelSize;
 	Vector3 _previousPosition;
 	Rotation _previousRotation;
 
@@ -95,10 +96,12 @@ public class VividPanel : Component
 	{
 		base.OnUpdate();
 
-		if ( WorldPosition != _previousPosition || WorldRotation != _previousRotation )
+		if ( WorldPosition != _previousPosition || WorldRotation != _previousRotation || PanelSize != _previousPanelSize )
 		{
 			_previousPosition = WorldPosition;
 			_previousRotation = WorldRotation;
+			_previousPanelSize = PanelSize;
+
 			CreateVertexBuffer();
 		}
 	}
