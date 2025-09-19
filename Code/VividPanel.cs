@@ -318,10 +318,10 @@ public class VividPanel : Component
 		var position = WorldPosition;
 
 		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
-		float dist = Vector3.DistanceBetweenSquared( Scene.Camera.WorldPosition, WorldPosition );
+		float dist = Vector3.DistanceBetween( Scene.Camera.WorldPosition, WorldPosition );
 
 		if ( LookAtCamera && ConsistentSize )
-			scale += (dist / (5000f * 5000f));
+			scale = dist / 2500f;
 
 		Rect rect = CalculateRect();
 		List<Vertex> vertices =
