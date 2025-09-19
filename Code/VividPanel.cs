@@ -180,11 +180,14 @@ public class VividPanel : Component
 			}
 		}
 
-		if ( _texture is null || _texture.Size != PanelSize )
+		var scaledSize = (Vector2Int)(Vector2)(PanelSize / RenderScale);
+		if ( _texture is null || _texture.Size != scaledSize )
 		{
-			CreateTexture( PanelSize );
+			CreateTexture( scaledSize );
 			return;
 		}
+
+		Log.Info( _texture.Size );
 
 		Graphics.RenderTarget = RenderTarget.From( _texture );
 		Graphics.Attributes.SetCombo( "D_WORLDPANEL", 0 );
@@ -257,9 +260,7 @@ public class VividPanel : Component
 		var rotation = WorldRotation;
 		var position = WorldPosition;
 
-		_rootPanel.RenderScale = RenderScale;
-
-		float uv = 1f / RenderScale;
+		float uv = 1f;
 		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
 
 		Rect rect = CalculateRect();
