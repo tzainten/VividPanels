@@ -2,16 +2,62 @@
 using Sandbox.Rendering;
 using Sandbox.UI;
 using System.Collections.Generic;
+using static Sandbox.VertexLayout;
 
 namespace VividPanels;
 
 internal class VividRootPanel : RootPanel
 {
+	internal Transform Transform;
+	internal Vector3 Position => Transform.Position;
+	internal Rotation Rotation => Transform.Rotation;
+	internal float MaxInteractionDistance = 10000f;
+
+	internal float RenderScale;
+
 	protected override void UpdateScale( Rect screenSize )
 	{
-		base.UpdateScale( screenSize );
-
 		Scale = 2f;
+	}
+
+	protected override void UpdateBounds( Rect rect )
+	{
+		base.UpdateBounds( rect * Scale );
+	}
+
+	internal Vector3 RayPosition;
+	internal Vector3 RayForward;
+
+	public override bool RayToLocalPosition( Ray ray, out Vector2 position, out float distance )
+	{
+		RayPosition = ray.Position;
+		RayForward = ray.Forward;
+
+		position = default( Vector2 );
+		distance = 0f;
+
+		var plane = new Plane( Position, Rotation.Forward );
+		//Log.Info( plane.IntersectLine( RayPosition, RayPosition + RayForward * 500 ) );
+
+		Vector3? vector = new Plane( Position, Rotation.Forward ).Trace( in ray, twosided: false, MaxInteractionDistance );
+		if ( !vector.HasValue )
+		{
+			return false;
+		}
+		distance = Vector3.DistanceBetween( vector.Value, ray.Position );
+		if ( distance < 1f )
+		{
+			return false;
+		}
+		Vector3 vector2 = Transform.PointToLocal( vector.Value );
+		Vector2 vector3 = new Vector2( vector2.y, 0f - vector2.z );
+		vector3 *= 20f;
+		if ( !IsInside( vector3 ) )
+		{
+			return false;
+		}
+		position = vector3;
+		return true;
 	}
 }
 
@@ -41,7 +87,7 @@ public class VividPanel : Component
 		Bottom
 	}
 
-	[Property] internal float RenderScale { get; set; } = 1;
+	[Property] internal float RenderScale { get; set; } = 1f;
 	[Property] internal bool LookAtCamera { get; set; } = false;
 	[Property] internal Vector2Int PanelSize { get; set; } = 512;
 	[Property] internal HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
@@ -92,6 +138,19 @@ public class VividPanel : Component
 
 		_rootPanel?.Delete();
 		_rootPanel = null;
+	}
+
+	protected override void OnUpdate()
+	{
+		base.OnUpdate();
+
+		//var transform = Transform.World;
+		//transform.Rotation *= Rotation.From( -90, 90, 0 );
+
+		//DebugOverlay.Line( WorldPosition, WorldPosition + transform.Rotation.Forward * 500 );
+		////DebugOverlay.Line( _rootPanel.RayPosition, _rootPanel.RayPosition + _rootPanel.RayForward * 500, duration: 5f );
+
+		//_rootPanel.Transform = transform;
 	}
 
 	private void OnRender( SceneObject sceneObject )
@@ -198,19 +257,21 @@ public class VividPanel : Component
 		var rotation = WorldRotation;
 		var position = WorldPosition;
 
+		_rootPanel.RenderScale = RenderScale;
+
 		float uv = 1f / RenderScale;
 		var scale = Sandbox.UI.WorldPanel.ScreenToWorldScale;
 
 		Rect rect = CalculateRect();
 		List<Vertex> vertices =
 		[
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, uv, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), Vector3.Up, Vector3.Forward, new Vector4( uv, uv, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), Vector3.Up, Vector3.Forward, new Vector4( uv, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, uv, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopRight * scale), rotation.Forward, rotation.Up, new Vector4( uv, uv, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( uv, 0, 0, 0 ) ),
 
-			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), Vector3.Up, Vector3.Forward, new Vector4( uv, 0, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.BottomLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, 0, 0, 0 ) ),
-			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), Vector3.Up, Vector3.Forward, new Vector4( 0, uv, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomRight * scale), rotation.Forward, rotation.Up, new Vector4( uv, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.BottomLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 0, 0, 0 ) ),
+			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, uv, 0, 0 ) ),
 		];
 
 		int vertexCount = vertices.Count;

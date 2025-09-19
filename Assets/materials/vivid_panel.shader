@@ -56,6 +56,10 @@ PS
 
 	float4 MainPs( PixelInput i ) : SV_Target0
 	{
+		float2 uv = i.vTextureCoords.xy;
+		if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
+			discard; // Skip this pixel completely
+
 		float4 col = g_tPanel.Sample(g_sTrilinearClamp, i.vTextureCoords.xy).rgba;
 		return col;
 	}
