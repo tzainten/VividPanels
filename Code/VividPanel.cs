@@ -2,8 +2,58 @@
 using Sandbox.Rendering;
 using Sandbox.UI;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace VividPanels;
+
+public class VividRenderSystem : GameObjectSystem
+{
+	CommandList _commands;
+
+	public VividRenderSystem( Scene scene ) : base( scene )
+	{
+		Listen( Stage.SceneLoaded, 10, InitCommandList, "InitCommandList" );
+		Listen( Stage.StartUpdate, 10, RenderAllPanels, "RenderAllPanels" );
+	}
+
+	void InitCommandList()
+	{
+		_commands = new CommandList( $"VividPanels" );
+		Scene.Camera.AddCommandList( _commands, Sandbox.Rendering.Stage.AfterPostProcess );
+	}
+
+	void RenderAllPanels()
+	{
+		if ( !Game.IsPlaying )
+			return;
+
+		var panels = Scene.GetAllComponents<VividPanel>().ToList();
+
+		panels.Sort( ( a, b ) =>
+		{
+			float dist0 = a.WorldPosition.DistanceSquared( Scene.Camera.WorldPosition );
+			float dist1 = b.WorldPosition.DistanceSquared( Scene.Camera.WorldPosition );
+
+			if ( dist0.AlmostEqual( dist1, 0.1f ) )
+				return 0;
+
+			if ( dist0 < dist1 )
+				return 1;
+
+			return -1;
+		} );
+
+		_commands.Reset();
+		foreach ( var panel in panels )
+		{
+			var attributes = _commands.Attributes;
+			attributes.Set( "Panel", panel.Texture );
+
+			if ( panel.Texture.IsValid() )
+				_commands.Draw( panel.VertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, panel.VertexCount );
+		}
+	}
+}
 
 internal class VividRootPanel : RootPanel
 {
@@ -53,21 +103,11 @@ public class VividPanel : Component
 	VividRootPanel _rootPanel;
 	PanelComponent _source;
 
-	Texture _texture;
-	CommandList _commands;
 	SceneCustomObject _renderObject;
 
-	bool _hasRendered = false;
-	int _vertexCount;
-	GpuBuffer<Vertex> _vertexBuffer;
-
-	protected override void OnEnabled()
-	{
-		base.OnEnabled();
-
-		_commands = new CommandList( $"VividPanel_{GetHashCode()}" );
-		Scene.Camera.AddCommandList( _commands, Stage.AfterPostProcess );
-	}
+	internal Texture Texture;
+	internal int VertexCount;
+	internal GpuBuffer<Vertex> VertexBuffer;
 
 	protected override void OnStart()
 	{
@@ -95,6 +135,11 @@ public class VividPanel : Component
 	protected override void OnUpdate()
 	{
 		base.OnUpdate();
+
+		if ( LookAtCamera )
+		{
+			WorldRotation = Rotation.LookAt( Scene.Camera.WorldRotation.Right, Vector3.Right );
+		}
 
 		if ( WorldPosition != _previousPosition || WorldRotation != _previousRotation || PanelSize != _previousPanelSize )
 		{
@@ -145,30 +190,30 @@ public class VividPanel : Component
 		}
 
 		var scaledSize = (Vector2Int)(PanelSize / RenderScale);
-		if ( _texture is null || _texture.Size != scaledSize )
+		if ( Texture is null || Texture.Size != scaledSize )
 		{
 			CreateTexture( scaledSize );
-			return;
 		}
 
 		_rootPanel.PanelBounds = new Rect( 0, scaledSize );
 
-		Graphics.RenderTarget = RenderTarget.From( _texture );
+		Graphics.RenderTarget = RenderTarget.From( Texture );
 		Graphics.Attributes.SetCombo( "D_WORLDPANEL", 0 );
 		Graphics.Viewport = new Rect( 0, _rootPanel.PanelBounds.Size );
 		Graphics.Clear();
 
 		_rootPanel.RenderManual();
-		_hasRendered = true;
 
 		Graphics.RenderTarget = null;
 	}
 
 	private void CreateTexture( Vector2 size )
 	{
-		_hasRendered = false;
-		_texture?.Dispose();
-		_texture = Texture.CreateRenderTarget()
+		if ( size.x <= 0 || size.y <= 0 )
+			return;
+
+		Texture?.Dispose();
+		Texture = Texture.CreateRenderTarget()
 			.WithSize( size )
 			.WithDynamicUsage()
 			.WithUAVBinding()
@@ -231,29 +276,8 @@ public class VividPanel : Component
 			new Vertex( position + rotation * ((Vector3)rect.TopLeft * scale), rotation.Forward, rotation.Up, new Vector4( 0, 1, 0, 0 ) ),
 		];
 
-		_vertexCount = vertices.Count;
-		_vertexBuffer = new GpuBuffer<Vertex>( _vertexCount, GpuBuffer.UsageFlags.Vertex );
-		_vertexBuffer.SetData( vertices );
-	}
-
-	protected override void OnPreRender()
-	{
-		base.OnPreRender();
-
-		_commands.Reset();
-
-		var attributes = _commands.Attributes;
-		attributes.Set( "Panel", _texture );
-
-		if ( _hasRendered )
-			_commands.Draw( _vertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, _vertexCount );
-	}
-
-	protected override void OnDisabled()
-	{
-		base.OnDisabled();
-
-		Scene.Camera.RemoveCommandList( _commands );
-		_commands = null;
+		VertexCount = vertices.Count;
+		VertexBuffer = new GpuBuffer<Vertex>( VertexCount, GpuBuffer.UsageFlags.Vertex );
+		VertexBuffer.SetData( vertices );
 	}
 }
