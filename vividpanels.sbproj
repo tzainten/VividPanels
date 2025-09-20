@@ -1,7 +1,14 @@
 {
   "Title": "Vivid Panels",
   "Type": "library",
-  "Org": "local",
+  "Org": "tzainten",
   "Ident": "vividpanels",
-  "Schema": 1
+  "Schema": 1,
+  "IncludeSourceFiles": false,
+  "Resources": null,
+  "PackageReferences": [],
+  "EditorReferences": null,
+  "Mounts": null,
+  "IsStandaloneOnly": false,
+  "Metadata": {}
 }
