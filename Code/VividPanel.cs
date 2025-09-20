@@ -1,20 +1,21 @@
 ﻿using Sandbox;
 using Sandbox.Rendering;
 using Sandbox.UI;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
 namespace VividPanels;
 
-public class VividRenderSystem : GameObjectSystem
+public class VividRenderSystem : GameObjectSystem<VividRenderSystem>
 {
-	CommandList _commands;
+	public CommandList _commands;
 
 	public VividRenderSystem( Scene scene ) : base( scene )
 	{
 		Listen( Stage.SceneLoaded, 10, InitCommandList, "InitCommandList" );
-		Listen( Stage.StartUpdate, 10, RenderAllPanels, "RenderAllPanels" );
+		//Listen( Stage.StartUpdate, 10, RenderAllPanels, "RenderAllPanels" );
 	}
 
 	void InitCommandList()
@@ -23,7 +24,7 @@ public class VividRenderSystem : GameObjectSystem
 		Scene.Camera.AddCommandList( _commands, Sandbox.Rendering.Stage.AfterPostProcess );
 	}
 
-	void RenderAllPanels()
+	public void RenderAllPanels()
 	{
 		if ( !Game.IsPlaying )
 			return;
@@ -44,19 +45,35 @@ public class VividRenderSystem : GameObjectSystem
 			return -1;
 		} );
 
-		_commands.Reset();
+		
 		foreach ( var panel in panels )
 		{
 			var attributes = _commands.Attributes;
 			attributes.Set( "Panel", panel.Texture );
 
-			if ( panel.Texture.IsValid() )
-				_commands.Draw( panel.VertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, panel.VertexCount );
+			//Graphics.Attributes.SetCombo( StringToken.Literal( "D_WORLDPANEL", 3066976377u ), 1 );
+			//Matrix value = Matrix.CreateRotation( Rotation.From( 0f, 90f, 90f ) );
+			//value *= Matrix.CreateScale( 0.05f );
+			//Graphics.Attributes.Set( StringToken.Literal( "WorldMat", 751663081u ), in value );
+			//panel._rootPanel?.RenderManual();
+
+			//_commands.DrawRenderer
+
+			//if ( panel.Texture.IsValid() )
+			//	_commands.Draw( panel.VertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, panel.VertexCount );
+
+			//var renderer = panel.GetComponent<TestPanelRenderer>();
+			//if ( renderer.IsValid() )
+			//{
+			//	renderer._rootPanel.SceneObject.RenderingEnabled = true;
+			//	_commands.DrawRenderer( renderer );
+			//	//renderer._rootPanel.SceneObject.RenderingEnabled = false;
+			//}
 		}
 	}
 }
 
-internal class VividRootPanel : RootPanel
+public class VividRootPanel : RootPanel
 {
 	internal Transform Transform;
 
@@ -71,7 +88,7 @@ internal class VividRootPanel : RootPanel
 
 	protected override void UpdateBounds( Rect rect )
 	{
-		base.UpdateBounds( rect * Scale );
+		base.UpdateBounds( PanelBounds );
 	}
 
 	public override bool RayToLocalPosition( Ray ray, out Vector2 position, out float distance )
@@ -131,7 +148,7 @@ public class VividPanel : Component
 		Bottom
 	}
 
-	[Property] internal float RenderScale { get; set; } = 1f;
+	[Property] public float RenderScale { get; set; } = 1f;
 	[Property] internal bool LookAtCamera { get; set; } = false;
 	[Property, ShowIf( "LookAtCamera", true )] internal bool ConsistentSize { get; set; } = false;
 	[Property] internal Vector2Int PanelSize { get; set; } = 512;
@@ -139,14 +156,14 @@ public class VividPanel : Component
 	[Property] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
 	[Property] internal float InteractionRange { get; set; } = 1000f;
 
-	VividRootPanel _rootPanel;
+	public VividRootPanel _rootPanel;
 	PanelComponent _source;
 
 	SceneCustomObject _renderObject;
 
-	internal Texture Texture;
-	internal int VertexCount;
-	internal GpuBuffer<Vertex> VertexBuffer;
+	public Texture Texture;
+	public int VertexCount;
+	public GpuBuffer<Vertex> VertexBuffer;
 
 	protected override void OnStart()
 	{
@@ -248,16 +265,26 @@ public class VividPanel : Component
 			CreateTexture( scaledSize );
 		}
 
-		_rootPanel.PanelBounds = new Rect( 0, scaledSize );
+		//_rootPanel.PanelBounds = new Rect( 0, scaledSize );
 
-		Graphics.RenderTarget = RenderTarget.From( Texture );
-		Graphics.Attributes.SetCombo( "D_WORLDPANEL", 0 );
-		Graphics.Viewport = new Rect( 0, _rootPanel.PanelBounds.Size );
-		Graphics.Clear();
+		//_rootPanel.Transform = base.WorldTransform.WithRotation( WorldRotation ).WithScale( WorldScale * RenderScale );
+		//Rect panelBounds = CalculateRect();
+		//panelBounds.Left /= RenderScale;
+		//panelBounds.Right /= RenderScale;
+		//panelBounds.Top /= RenderScale;
+		//panelBounds.Bottom /= RenderScale;
+		//_rootPanel.PanelBounds = panelBounds;
 
-		_rootPanel.RenderManual();
 
-		Graphics.RenderTarget = null;
+
+		//Graphics.RenderTarget = RenderTarget.From( Texture );
+		//Graphics.Attributes.SetCombo( "D_WORLDPANEL", 0 );
+		//Graphics.Viewport = new Rect( 0, _rootPanel.PanelBounds.Size );
+		//Graphics.Clear();
+
+		//_rootPanel.RenderManual();
+
+		//Graphics.RenderTarget = null;
 	}
 
 	private void CreateTexture( Vector2 size )
@@ -273,7 +300,7 @@ public class VividPanel : Component
 			.Create();
 	}
 
-	internal Rect CalculateRect()
+	public Rect CalculateRect()
 	{
 		Rect result = new Rect( (Vector2)0.0, PanelSize );
 		if ( HorizontalAlign == HAlignment.Center )
@@ -303,7 +330,7 @@ public class VividPanel : Component
 
 		if ( _rootPanel.IsValid() )
 		{
-			_rootPanel.Rect = result;
+			//_rootPanel.Rect = result;
 			//_rootPanel.Transform.Scale = scale;
 		}
 

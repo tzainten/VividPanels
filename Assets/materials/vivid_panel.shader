@@ -29,6 +29,11 @@ COMMON
 	#include "procedural.hlsl"
 
 	#define S_UV2 1
+
+	float4 g_vViewport;                   // xy = viewport min, zw = viewport size
+	float4x4 g_matTransform;              // transform for the panel
+	float4x4 LayerMat;                    // layer matrix
+	float4x4 g_matWorldPanel;             // world panel transform
 }
 
 struct VertexInput
@@ -56,17 +61,47 @@ VS
 
 	PixelInput MainVs( VertexInput v )
 	{
-		
-		PixelInput i = ProcessVertex( v );
-		i.vPositionOs = v.vPositionOs.xyz;
+		PixelInput i;
+
+
+
+		float3 vPositionSs = v.vPositionOs.xyz; // treat incoming vertex as SS quad pos
+
+		#ifdef D_WORLDPANEL
+			float4 vMatrix = mul(LayerMat, mul(g_matTransform, float4(vPositionSs.xyz, 1)));
+			vPositionSs.xyz = vMatrix.xyz / vMatrix.w;
+
+			float3x4 matObjectToWorld = GetTransformMatrix(v.nInstanceTransformID);
+			matObjectToWorld = mul(matObjectToWorld, g_matWorldPanel);
+
+			float4 vPositionWs = mul(matObjectToWorld, float4(vPositionSs, 1));
+			i.vPositionWs = vPositionWs.xyz;
+			i.vPositionPs = Position3WsToPs(vPositionWs.xyz);
+
+			i.vTextureCoords.xy = vPositionSs.xy / g_vViewport.zw;
+		#else
+// Transform from panel-space -> clip-space
+		float4 vMatrix = mul(LayerMat, mul(g_matTransform, float4(vPositionSs.xy, 0, 1)));
+		vPositionSs.xy = vMatrix.xy / vMatrix.w;
+
+		float4 positionPs;
+		positionPs.xy = 2.0 * (vPositionSs.xy - g_vViewport.xy) / (g_vViewport.zw) - float2(1.0, 1.0);
+		positionPs.y *= -1.0;
+		positionPs.z = 1.0;
+		positionPs.w = 1.0;
+		i.vPositionPs = positionPs;
+
+		// Pass through UVs (normalized against viewport)
+		i.vTextureCoords.xy = vPositionSs.xy / g_vViewport.zw;
+
+		// Copy other data you need
 		i.vColor = v.vColor;
+		i.vTintColor = GetExtraPerInstanceShaderData(v.nInstanceTransformID).vTint;
+		#endif
+
 		
-		ExtraShaderData_t extraShaderData = GetExtraPerInstanceShaderData( v.nInstanceTransformID );
-		i.vTintColor = extraShaderData.vTint;
-		
-		VS_DecodeObjectSpaceNormalAndTangent( v, i.vNormalOs, i.vTangentUOs_flTangentVSign );
-		return FinalizeVertex( i );
-		
+
+		return i;
 	}
 }
 
