@@ -225,6 +225,7 @@ public class VividPanel : Component
 		}
 
 		var scale = 1f;
+		WorldRenderScale = RenderScale;
 		if ( Game.IsPlaying && LookAtCamera && ConsistentSize )
 		{
 			float depth = Vector3.Dot( WorldPosition - Scene.Camera.WorldPosition, Scene.Camera.WorldRotation.Forward );
