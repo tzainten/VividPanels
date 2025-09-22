@@ -95,13 +95,14 @@ public class VividPanel : Component
 
 	internal float WorldRenderScale = 1f;
 
-	[Property] public float RenderScale { get; set; } = 1f;
-	[Property] internal bool LookAtCamera { get; set; } = false;
-	[Property, ShowIf( "LookAtCamera", true )] internal bool ConsistentSize { get; set; } = false;
-	[Property] internal Vector2Int PanelSize { get; set; } = 512;
-	[Property] internal HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
-	[Property] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
-	[Property] internal float InteractionRange { get; set; } = 1000f;
+	[Property, Change( "CreateVertexBuffer" )] public float RenderScale { get; set; } = 1f;
+	[Property] internal bool RenderBackFace { get; set; } = true;
+	[Property, Change( "CreateVertexBuffer" )] internal bool LookAtCamera { get; set; } = false;
+	[Property, ShowIf( "LookAtCamera", true ), Change( "CreateVertexBuffer" )] internal bool ConsistentSize { get; set; } = false;
+	[Property, Change( "CreateVertexBuffer" )] internal Vector2Int PanelSize { get; set; } = 512;
+	[Property, Change( "CreateVertexBuffer" )] internal HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
+	[Property, Change( "CreateVertexBuffer" )] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
+	[Property, Change( "CreateVertexBuffer" )] internal float InteractionRange { get; set; } = 1000f;
 
 	public VividRootPanel RootPanel;
 	PanelComponent _source;
@@ -133,38 +134,13 @@ public class VividPanel : Component
 		CreateVertexBuffer();
 	}
 
-	Vector2Int _previousPanelSize;
-	Vector3 _previousPosition;
-	Rotation _previousRotation;
-	HAlignment _previousHAlign;
-	VAlignment _previousVAlign;
-
 	protected override void OnUpdate()
 	{
 		base.OnUpdate();
 
-		RootPanel.Transform = Transform.World.WithScale( WorldScale * WorldRenderScale );
-		RootPanel.MaxInteractionDistance = InteractionRange;
-
 		if ( LookAtCamera )
 		{
 			WorldRotation = Rotation.LookAt( Scene.Camera.WorldRotation.Backward, Vector3.Up );
-		}
-
-		if ( WorldPosition != _previousPosition
-			|| WorldRotation != _previousRotation
-			|| PanelSize != _previousPanelSize
-			|| _previousHAlign != HorizontalAlign
-			|| _previousVAlign != VerticalAlign
-			|| ConsistentSize )
-		{
-			_previousPosition = WorldPosition;
-			_previousRotation = WorldRotation;
-			_previousPanelSize = PanelSize;
-			_previousHAlign = HorizontalAlign;
-			_previousVAlign = VerticalAlign;
-
-			CreateVertexBuffer();
 		}
 	}
 
@@ -282,5 +258,8 @@ public class VividPanel : Component
 		VertexCount = vertices.Count;
 		VertexBuffer = new GpuBuffer<Vertex>( VertexCount, GpuBuffer.UsageFlags.Vertex );
 		VertexBuffer.SetData( vertices );
+
+		RootPanel.Transform = Transform.World.WithScale( WorldScale * WorldRenderScale );
+		RootPanel.MaxInteractionDistance = InteractionRange;
 	}
 }

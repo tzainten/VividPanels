@@ -33,6 +33,17 @@ internal class VividPanelRenderer : Component, CameraComponent.ISceneCameraSetup
 
 			foreach ( var panel in panels )
 			{
+				if ( !panel.RenderBackFace )
+				{
+					Vector3 objectForward = panel.WorldRotation.Forward;
+					Vector3 toCamera = (Scene.Camera.WorldPosition - panel.WorldPosition).Normal;
+
+					float dot = Vector3.Dot( objectForward, toCamera );
+
+					if ( dot <= 0 )
+						continue;
+				}
+
 				Graphics.Attributes.SetCombo( "D_WORLDPANEL", 1 );
 				Matrix value = Matrix.CreateRotation( Rotation.From( 0f, 90f, 90f ) );
 				value *= Matrix.CreateScale( Sandbox.UI.WorldPanel.ScreenToWorldScale * panel.WorldScale * panel.WorldRenderScale );
