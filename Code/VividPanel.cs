@@ -140,7 +140,7 @@ public class VividPanel : Component
 	{
 		base.OnUpdate();
 
-		RootPanel.Transform = Transform.World;
+		RootPanel.Transform = Transform.World.WithScale( WorldScale * RenderScale );
 		RootPanel.MaxInteractionDistance = InteractionRange;
 
 		if ( LookAtCamera )
