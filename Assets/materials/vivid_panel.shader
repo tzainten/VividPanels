@@ -119,7 +119,7 @@ PS
 
 	float4 MainPs( PixelInput i ) : SV_Target0
 	{
-		float4 col = g_tPanel.Sample(g_sTrilinearClamp, i.vTextureCoords.xy).rgba;
+		float4 col = g_tPanel.Sample(g_sAnsio, i.vTextureCoords.xy).rgba;
 
 		return col;
 	}

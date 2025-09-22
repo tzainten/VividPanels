@@ -1,75 +1,24 @@
-﻿using Sandbox;
-using Sandbox.Rendering;
+﻿using Blocks;
+using Sandbox;
 using Sandbox.UI;
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 
 namespace VividPanels;
 
-public class VividRenderSystem : GameObjectSystem<VividRenderSystem>
+public class VividPanelSystem : GameObjectSystem
 {
-	public CommandList _commands;
-
-	public VividRenderSystem( Scene scene ) : base( scene )
+	public VividPanelSystem( Scene scene ) : base( scene )
 	{
-		Listen( Stage.SceneLoaded, 10, InitCommandList, "InitCommandList" );
-		//Listen( Stage.StartUpdate, 10, RenderAllPanels, "RenderAllPanels" );
+		Listen( Stage.StartUpdate, 0, StartUpdate, "StartUpdate" );
 	}
 
-	void InitCommandList()
+	void StartUpdate()
 	{
-		_commands = new CommandList( $"VividPanels" );
-		Scene.Camera.AddCommandList( _commands, Sandbox.Rendering.Stage.AfterPostProcess );
-	}
-
-	public void RenderAllPanels()
-	{
-		if ( !Game.IsPlaying )
+		if ( !Scene.Camera.IsValid() )
 			return;
 
-		var panels = Scene.GetAllComponents<VividPanel>().ToList();
-
-		panels.Sort( ( a, b ) =>
-		{
-			float dist0 = a.WorldPosition.DistanceSquared( Scene.Camera.WorldPosition );
-			float dist1 = b.WorldPosition.DistanceSquared( Scene.Camera.WorldPosition );
-
-			if ( dist0.AlmostEqual( dist1, 0.1f ) )
-				return 0;
-
-			if ( dist0 < dist1 )
-				return 1;
-
-			return -1;
-		} );
-
-		
-		foreach ( var panel in panels )
-		{
-			var attributes = _commands.Attributes;
-			attributes.Set( "Panel", panel.Texture );
-
-			//Graphics.Attributes.SetCombo( StringToken.Literal( "D_WORLDPANEL", 3066976377u ), 1 );
-			//Matrix value = Matrix.CreateRotation( Rotation.From( 0f, 90f, 90f ) );
-			//value *= Matrix.CreateScale( 0.05f );
-			//Graphics.Attributes.Set( StringToken.Literal( "WorldMat", 751663081u ), in value );
-			//panel._rootPanel?.RenderManual();
-
-			//_commands.DrawRenderer
-
-			//if ( panel.Texture.IsValid() )
-			//	_commands.Draw( panel.VertexBuffer, Material.Load( "materials/vivid_panel.vmat" ), 0, panel.VertexCount );
-
-			//var renderer = panel.GetComponent<TestPanelRenderer>();
-			//if ( renderer.IsValid() )
-			//{
-			//	renderer._rootPanel.SceneObject.RenderingEnabled = true;
-			//	_commands.DrawRenderer( renderer );
-			//	//renderer._rootPanel.SceneObject.RenderingEnabled = false;
-			//}
-		}
+		if ( !Scene.Camera.GetComponent<VividPanelRenderer>().IsValid() )
+			Scene.Camera.AddComponent<VividPanelRenderer>();
 	}
 }
 
@@ -93,31 +42,26 @@ public class VividRootPanel : RootPanel
 
 	public override bool RayToLocalPosition( Ray ray, out Vector2 position, out float distance )
 	{
-		position = default;
+		position = default( Vector2 );
 		distance = 0f;
-
-		Vector3? vector = new Plane( Transform.Position, Transform.Forward ).Trace( in ray, twosided: false, MaxInteractionDistance );
-
+		Vector3? vector = new Plane( Transform.Position, Transform.Rotation.Forward ).Trace( in ray, twosided: false, MaxInteractionDistance );
 		if ( !vector.HasValue )
 		{
 			return false;
 		}
-
 		distance = Vector3.DistanceBetween( vector.Value, ray.Position );
 		if ( distance < 1f )
 		{
 			return false;
 		}
-
 		Vector3 vector2 = Transform.PointToLocal( vector.Value );
-		Vector2 vector3 = new Vector2( vector2.y, -vector2.z );
-		vector3 /= Sandbox.UI.WorldPanel.ScreenToWorldScale;
-
-		if ( !Rect.IsInside( vector3 ) )
+		Vector2 vector3 = new Vector2( vector2.y, 0f - vector2.z );
+		vector3 *= 20f;
+		if ( !IsInside( vector3 ) )
+		{
 			return false;
-
-		position = vector3 - Rect.Position;
-
+		}
+		position = vector3;
 		return true;
 	}
 }
@@ -156,7 +100,7 @@ public class VividPanel : Component
 	[Property] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
 	[Property] internal float InteractionRange { get; set; } = 1000f;
 
-	public VividRootPanel _rootPanel;
+	public VividRootPanel RootPanel;
 	PanelComponent _source;
 
 	SceneCustomObject _renderObject;
@@ -169,7 +113,7 @@ public class VividPanel : Component
 	{
 		base.OnStart();
 
-		_rootPanel = new VividRootPanel
+		RootPanel = new VividRootPanel
 		{
 			RenderedManually = true,
 			Scene = Scene,
@@ -196,8 +140,8 @@ public class VividPanel : Component
 	{
 		base.OnUpdate();
 
-		_rootPanel.Transform = Transform.World;
-		_rootPanel.MaxInteractionDistance = InteractionRange;
+		RootPanel.Transform = Transform.World;
+		RootPanel.MaxInteractionDistance = InteractionRange;
 
 		if ( LookAtCamera )
 		{
@@ -228,41 +172,41 @@ public class VividPanel : Component
 		_renderObject?.Delete();
 		_renderObject = null;
 
-		_rootPanel?.Delete();
-		_rootPanel = null;
+		RootPanel?.Delete();
+		RootPanel = null;
 	}
 
 	private void OnRender( SceneObject sceneObject )
 	{
-		if ( !_rootPanel.IsValid() )
+		if ( !RootPanel.IsValid() )
 			return;
 
-		if ( !_rootPanel.RenderedManually )
+		if ( !RootPanel.RenderedManually )
 		{
-			_rootPanel.RenderedManually = true;
+			RootPanel.RenderedManually = true;
 		}
 
 		if (
 			_source.IsValid()
 			&& _source.Panel.IsValid()
-			&& _source.Panel.Parent != _rootPanel
+			&& _source.Panel.Parent != RootPanel
 		)
 		{
-			_source.Panel.Parent = _rootPanel;
+			_source.Panel.Parent = RootPanel;
 		}
 
 		if ( _source.IsValid() && _source.Panel.IsValid() )
 		{
-			if ( _source.Panel.Parent != _rootPanel )
+			if ( _source.Panel.Parent != RootPanel )
 			{
-				_source.Panel.Parent = _rootPanel;
+				_source.Panel.Parent = RootPanel;
 			}
 		}
 
 		var scaledSize = (Vector2Int)(PanelSize / RenderScale);
 		if ( Texture is null || Texture.Size != scaledSize )
 		{
-			CreateTexture( scaledSize );
+			//CreateTexture( scaledSize );
 		}
 
 		//_rootPanel.PanelBounds = new Rect( 0, scaledSize );
@@ -328,9 +272,9 @@ public class VividPanel : Component
 			result *= scale;
 		}
 
-		if ( _rootPanel.IsValid() )
+		if ( RootPanel.IsValid() )
 		{
-			//_rootPanel.Rect = result;
+			RootPanel.Rect = result;
 			//_rootPanel.Transform.Scale = scale;
 		}
 
