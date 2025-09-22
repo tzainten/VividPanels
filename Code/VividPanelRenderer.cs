@@ -35,16 +35,18 @@ internal class VividPanelRenderer : Component, CameraComponent.ISceneCameraSetup
 			{
 				Graphics.Attributes.SetCombo( "D_WORLDPANEL", 1 );
 				Matrix value = Matrix.CreateRotation( Rotation.From( 0f, 90f, 90f ) );
-				value *= Matrix.CreateScale( Sandbox.UI.WorldPanel.ScreenToWorldScale * panel.WorldScale * panel.RenderScale );
+				value *= Matrix.CreateScale( Sandbox.UI.WorldPanel.ScreenToWorldScale * panel.WorldScale * panel.WorldRenderScale );
 				value *= Matrix.CreateRotation( panel.WorldRotation );
 				value *= Matrix.CreateTranslation( panel.WorldPosition );
 
+				var scale = panel.WorldRenderScale;
+
 				Graphics.Attributes.Set( "WorldMat", in value );
 				Rect panelBounds = panel.CalculateRect();
-				panelBounds.Left /= panel.RenderScale;
-				panelBounds.Right /= panel.RenderScale;
-				panelBounds.Top /= panel.RenderScale;
-				panelBounds.Bottom /= panel.RenderScale;
+				panelBounds.Left /= scale;
+				panelBounds.Right /= scale;
+				panelBounds.Top /= scale;
+				panelBounds.Bottom /= scale;
 				panel.RootPanel.PanelBounds = panelBounds;
 				panel.RootPanel?.RenderManual();
 			}

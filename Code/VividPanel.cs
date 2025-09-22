@@ -26,8 +26,6 @@ public class VividRootPanel : RootPanel
 {
 	internal Transform Transform;
 
-	internal Rect Rect;
-
 	internal float MaxInteractionDistance;
 
 	protected override void UpdateScale( Rect screenSize )
@@ -92,6 +90,8 @@ public class VividPanel : Component
 		Bottom
 	}
 
+	internal float WorldRenderScale = 1f;
+
 	[Property] public float RenderScale { get; set; } = 1f;
 	[Property] internal bool LookAtCamera { get; set; } = false;
 	[Property, ShowIf( "LookAtCamera", true )] internal bool ConsistentSize { get; set; } = false;
@@ -140,7 +140,7 @@ public class VividPanel : Component
 	{
 		base.OnUpdate();
 
-		RootPanel.Transform = Transform.World.WithScale( WorldScale * RenderScale );
+		RootPanel.Transform = Transform.World.WithScale( WorldScale * WorldRenderScale );
 		RootPanel.MaxInteractionDistance = InteractionRange;
 
 		if ( LookAtCamera )
@@ -202,46 +202,6 @@ public class VividPanel : Component
 				_source.Panel.Parent = RootPanel;
 			}
 		}
-
-		var scaledSize = (Vector2Int)(PanelSize / RenderScale);
-		if ( Texture is null || Texture.Size != scaledSize )
-		{
-			//CreateTexture( scaledSize );
-		}
-
-		//_rootPanel.PanelBounds = new Rect( 0, scaledSize );
-
-		//_rootPanel.Transform = base.WorldTransform.WithRotation( WorldRotation ).WithScale( WorldScale * RenderScale );
-		//Rect panelBounds = CalculateRect();
-		//panelBounds.Left /= RenderScale;
-		//panelBounds.Right /= RenderScale;
-		//panelBounds.Top /= RenderScale;
-		//panelBounds.Bottom /= RenderScale;
-		//_rootPanel.PanelBounds = panelBounds;
-
-
-
-		//Graphics.RenderTarget = RenderTarget.From( Texture );
-		//Graphics.Attributes.SetCombo( "D_WORLDPANEL", 0 );
-		//Graphics.Viewport = new Rect( 0, _rootPanel.PanelBounds.Size );
-		//Graphics.Clear();
-
-		//_rootPanel.RenderManual();
-
-		//Graphics.RenderTarget = null;
-	}
-
-	private void CreateTexture( Vector2 size )
-	{
-		if ( size.x <= 0 || size.y <= 0 )
-			return;
-
-		Texture?.Dispose();
-		Texture = Texture.CreateRenderTarget()
-			.WithSize( size )
-			.WithDynamicUsage()
-			.WithUAVBinding()
-			.Create();
 	}
 
 	public Rect CalculateRect()
@@ -267,15 +227,14 @@ public class VividPanel : Component
 		var scale = 1f;
 		if ( Game.IsPlaying && LookAtCamera && ConsistentSize )
 		{
-			float dist = Vector3.DistanceBetween( Scene.Camera.WorldPosition, WorldPosition );
-			scale = dist / 250f;
-			result *= scale;
-		}
+			float depth = Vector3.Dot( WorldPosition - Scene.Camera.WorldPosition, Scene.Camera.WorldRotation.Forward );
+			if ( depth > 0 )
+			{
+				scale = depth / 100f;
 
-		if ( RootPanel.IsValid() )
-		{
-			RootPanel.Rect = result;
-			//_rootPanel.Transform.Scale = scale;
+				WorldRenderScale = RenderScale * scale;
+				result *= scale;
+			}
 		}
 
 		return result;
