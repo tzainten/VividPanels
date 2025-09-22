@@ -14,6 +14,9 @@ public class VividPanelSystem : GameObjectSystem
 
 	void StartUpdate()
 	{
+		if ( !Game.IsPlaying )
+			return;
+
 		if ( !Scene.Camera.IsValid() )
 			return;
 
