@@ -107,8 +107,6 @@ public class VividPanel : Component
 	public VividRootPanel RootPanel;
 	PanelComponent _source;
 
-	SceneCustomObject _renderObject;
-
 	public Texture Texture;
 	public int VertexCount;
 	public GpuBuffer<Vertex> VertexBuffer;
@@ -124,11 +122,6 @@ public class VividPanel : Component
 			IsWorldPanel = true,
 		};
 
-		_renderObject = new( Scene.SceneWorld )
-		{
-			RenderOverride = OnRender
-		};
-
 		_source = GetComponent<PanelComponent>();
 
 		CreateVertexBuffer();
@@ -142,21 +135,7 @@ public class VividPanel : Component
 		{
 			WorldRotation = Rotation.LookAt( Scene.Camera.WorldRotation.Backward, Vector3.Up );
 		}
-	}
 
-	protected override void OnDestroy()
-	{
-		base.OnDestroy();
-
-		_renderObject?.Delete();
-		_renderObject = null;
-
-		RootPanel?.Delete();
-		RootPanel = null;
-	}
-
-	private void OnRender( SceneObject sceneObject )
-	{
 		if ( !RootPanel.IsValid() )
 			return;
 
@@ -181,6 +160,14 @@ public class VividPanel : Component
 				_source.Panel.Parent = RootPanel;
 			}
 		}
+	}
+
+	protected override void OnDestroy()
+	{
+		base.OnDestroy();
+
+		RootPanel?.Delete();
+		RootPanel = null;
 	}
 
 	public Rect CalculateRect()
