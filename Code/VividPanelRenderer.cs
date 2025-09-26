@@ -33,6 +33,11 @@ internal class VividPanelRenderer : Component, CameraComponent.ISceneCameraSetup
 
 			foreach ( var panel in panels )
 			{
+				if ( panel.RenderDistance != 0f && Vector3.DistanceBetween( Scene.Camera.WorldPosition, panel.WorldPosition ) > panel.RenderDistance )
+				{
+					continue;
+				}
+
 				if ( !panel.RenderBackFace )
 				{
 					Vector3 objectForward = panel.WorldRotation.Forward;

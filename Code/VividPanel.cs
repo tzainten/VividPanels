@@ -103,6 +103,7 @@ public class VividPanel : Component
 	[Property, Change( "CreateVertexBuffer" )] public HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
 	[Property, Change( "CreateVertexBuffer" )] public VAlignment VerticalAlign { get; set; } = VAlignment.Center;
 	[Property, Change( "CreateVertexBuffer" )] public float InteractionRange { get; set; } = 1000f;
+	[Property] public float RenderDistance { get; set; } = 0f;
 
 	public VividRootPanel RootPanel;
 	PanelComponent _source;
