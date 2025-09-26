@@ -190,9 +190,11 @@ public class VividPanel : Component
 			result.Position -= new Vector2( 0f, PanelSize.y );
 		}
 
+		var camera = Scene.Camera;
+
 		var scale = 1f;
 		WorldRenderScale = RenderScale;
-		if ( Game.IsPlaying && LookAtCamera && ConsistentSize )
+		if ( camera.IsValid() && Game.IsPlaying && LookAtCamera && ConsistentSize )
 		{
 			float depth = Vector3.Dot( WorldPosition - Scene.Camera.WorldPosition, Scene.Camera.WorldRotation.Forward );
 			if ( depth > 0 )
