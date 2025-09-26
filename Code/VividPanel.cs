@@ -96,13 +96,13 @@ public class VividPanel : Component
 	internal float WorldRenderScale = 1f;
 
 	[Property, Change( "CreateVertexBuffer" )] public float RenderScale { get; set; } = 1f;
-	[Property] internal bool RenderBackFace { get; set; } = true;
-	[Property, Change( "CreateVertexBuffer" )] internal bool LookAtCamera { get; set; } = false;
-	[Property, ShowIf( "LookAtCamera", true ), Change( "CreateVertexBuffer" )] internal bool ConsistentSize { get; set; } = false;
-	[Property, Change( "CreateVertexBuffer" )] internal Vector2Int PanelSize { get; set; } = 512;
-	[Property, Change( "CreateVertexBuffer" )] internal HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
-	[Property, Change( "CreateVertexBuffer" )] internal VAlignment VerticalAlign { get; set; } = VAlignment.Center;
-	[Property, Change( "CreateVertexBuffer" )] internal float InteractionRange { get; set; } = 1000f;
+	[Property] public bool RenderBackFace { get; set; } = true;
+	[Property, Change( "CreateVertexBuffer" )] public bool LookAtCamera { get; set; } = false;
+	[Property, ShowIf( "LookAtCamera", true ), Change( "CreateVertexBuffer" )] public bool ConsistentSize { get; set; } = false;
+	[Property, Change( "CreateVertexBuffer" )] public Vector2Int PanelSize { get; set; } = 512;
+	[Property, Change( "CreateVertexBuffer" )] public HAlignment HorizontalAlign { get; set; } = HAlignment.Center;
+	[Property, Change( "CreateVertexBuffer" )] public VAlignment VerticalAlign { get; set; } = VAlignment.Center;
+	[Property, Change( "CreateVertexBuffer" )] public float InteractionRange { get; set; } = 1000f;
 
 	public VividRootPanel RootPanel;
 	PanelComponent _source;
