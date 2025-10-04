@@ -2,7 +2,7 @@
 using System.Linq;
 using VividPanels;
 
-namespace Blocks;
+namespace VividPanels;
 
 [Icon("preview")]
 [Category("UI")]
@@ -10,7 +10,7 @@ internal class VividPanelRenderer : Component, CameraComponent.ISceneCameraSetup
 {
 	public void SetupCamera( CameraComponent camera, SceneCamera sceneCamera )
 	{
-		sceneCamera.OnRenderOverlay += () =>
+		sceneCamera.OnRenderOverlay = () =>
 		{
 			if ( !Game.IsPlaying )
 				return;
@@ -19,8 +19,8 @@ internal class VividPanelRenderer : Component, CameraComponent.ISceneCameraSetup
 
 			panels.Sort( ( a, b ) =>
 			{
-				float dist0 = a.WorldPosition.DistanceSquared( Game.ActiveScene.Camera.WorldPosition );
-				float dist1 = b.WorldPosition.DistanceSquared( Game.ActiveScene.Camera.WorldPosition );
+				float dist0 = a.Source.Panel.Style.ZIndex.GetValueOrDefault();
+				float dist1 = b.Source.Panel.Style.ZIndex.GetValueOrDefault();
 
 				if ( dist0.AlmostEqual( dist1, 0.1f ) )
 					return 0;

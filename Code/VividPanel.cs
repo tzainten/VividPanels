@@ -1,6 +1,6 @@
-﻿using Blocks;
-using Sandbox;
+﻿using Sandbox;
 using Sandbox.UI;
+using System;
 using System.Collections.Generic;
 
 namespace VividPanels;
@@ -106,7 +106,7 @@ public class VividPanel : Component
 	[Property] public float RenderDistance { get; set; } = 0f;
 
 	public VividRootPanel RootPanel;
-	PanelComponent _source;
+	public PanelComponent Source;
 
 	public Texture Texture;
 	public int VertexCount;
@@ -123,7 +123,7 @@ public class VividPanel : Component
 			IsWorldPanel = true,
 		};
 
-		_source = GetComponent<PanelComponent>();
+		Source = GetComponent<PanelComponent>();
 
 		CreateVertexBuffer();
 	}
@@ -146,19 +146,19 @@ public class VividPanel : Component
 		}
 
 		if (
-			_source.IsValid()
-			&& _source.Panel.IsValid()
-			&& _source.Panel.Parent != RootPanel
+			Source.IsValid()
+			&& Source.Panel.IsValid()
+			&& Source.Panel.Parent != RootPanel
 		)
 		{
-			_source.Panel.Parent = RootPanel;
+			Source.Panel.Parent = RootPanel;
 		}
 
-		if ( _source.IsValid() && _source.Panel.IsValid() )
+		if ( Source.IsValid() && Source.Panel.IsValid() )
 		{
-			if ( _source.Panel.Parent != RootPanel )
+			if ( Source.Panel.Parent != RootPanel )
 			{
-				_source.Panel.Parent = RootPanel;
+				Source.Panel.Parent = RootPanel;
 			}
 		}
 	}
