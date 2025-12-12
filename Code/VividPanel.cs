@@ -1,29 +1,8 @@
 ﻿using Sandbox;
 using Sandbox.UI;
-using System;
 using System.Collections.Generic;
 
 namespace VividPanels;
-
-public class VividPanelSystem : GameObjectSystem
-{
-	public VividPanelSystem( Scene scene ) : base( scene )
-	{
-		Listen( Stage.StartUpdate, 0, StartUpdate, "StartUpdate" );
-	}
-
-	void StartUpdate()
-	{
-		if ( !Game.IsPlaying || Scene.IsEditor )
-			return;
-
-		if ( !Scene.Camera.IsValid() )
-			return;
-
-		if ( !Scene.Camera.GetComponent<VividPanelRenderer>().IsValid() )
-			Scene.Camera.AddComponent<VividPanelRenderer>();
-	}
-}
 
 public class VividRootPanel : RootPanel
 {
@@ -64,6 +43,59 @@ public class VividRootPanel : RootPanel
 		}
 		position = vector3;
 		return true;
+	}
+}
+
+internal class VividPanelObject : SceneCustomObject
+{
+	public string Text { get; set; }
+	public string FontName { get; set; } = "Roboto";
+	public float FontSize { get; set; } = 12.0f;
+	public float FontWeight { get; set; } = 500.0f;
+	public TextFlag TextFlags { get; set; } = TextFlag.Center;
+	public Color Color { get; set; } = Color.White;
+	public bool IgnoreDepth { get; set; } = true;
+
+	public VividPanel Panel;
+	public Scene Scene => Panel.Scene;
+
+	public VividPanelObject( SceneWorld sceneWorld ) : base( sceneWorld )
+	{
+		RenderLayer = SceneRenderLayer.Default;
+	}
+
+	public override void RenderSceneObject()
+	{
+		if ( Panel.RenderDistance != 0f && Vector3.DistanceBetween( Scene.Camera.WorldPosition, Panel.WorldPosition ) > Panel.RenderDistance )
+			return;
+
+		if ( !Panel.RenderBackFace )
+		{
+			Vector3 objectForward = Panel.WorldRotation.Forward;
+			Vector3 toCamera = (Scene.Camera.WorldPosition - Panel.WorldPosition).Normal;
+
+			float dot = Vector3.Dot( objectForward, toCamera );
+
+			if ( dot <= 0 )
+				return;
+		}
+
+		Graphics.Attributes.SetCombo( "D_WORLDPANEL", 1 );
+		Matrix value = Matrix.CreateRotation( Rotation.From( 0f, 90f, 90f ) );
+		value *= Matrix.CreateScale( Sandbox.UI.WorldPanel.ScreenToWorldScale * Panel.WorldScale * Panel.WorldRenderScale );
+		value *= Matrix.CreateRotation( Panel.WorldRotation );
+		value *= Matrix.CreateTranslation( Panel.WorldPosition );
+
+		var scale = Panel.WorldRenderScale;
+
+		Graphics.Attributes.Set( "WorldMat", in value );
+		Rect panelBounds = Panel.CalculateRect();
+		panelBounds.Left /= scale;
+		panelBounds.Right /= scale;
+		panelBounds.Top /= scale;
+		panelBounds.Bottom /= scale;
+		Panel.RootPanel.PanelBounds = panelBounds;
+		Panel.RootPanel?.RenderManual();
 	}
 }
 
@@ -112,6 +144,8 @@ public class VividPanel : Component
 	public int VertexCount;
 	public GpuBuffer<Vertex> VertexBuffer;
 
+	VividPanelObject obj;
+
 	protected override void OnStart()
 	{
 		base.OnStart();
@@ -119,9 +153,11 @@ public class VividPanel : Component
 		RootPanel = new VividRootPanel
 		{
 			RenderedManually = true,
-			Scene = Scene,
 			IsWorldPanel = true,
 		};
+
+		obj = new( Scene.SceneWorld );
+		obj.Panel = this;
 
 		Source = GetComponent<PanelComponent>();
 
