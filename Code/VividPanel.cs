@@ -1,6 +1,5 @@
 ﻿using Sandbox;
 using Sandbox.UI;
-using System;
 using System.Collections.Generic;
 
 namespace VividPanels;
@@ -20,7 +19,7 @@ public class VividPanelSystem : GameObjectSystem
 		if ( !Scene.Camera.IsValid() )
 			return;
 
-		if ( !Scene.Camera.GetComponent<VividPanelRenderer>().IsValid() )
+		if ( !Scene.Camera.GetComponent<VividPanelRenderer>( true ).IsValid() )
 			Scene.Camera.AddComponent<VividPanelRenderer>();
 	}
 }

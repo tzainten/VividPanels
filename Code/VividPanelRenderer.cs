@@ -1,11 +1,10 @@
-﻿using Sandbox;
+using Sandbox;
 using System.Linq;
-using VividPanels;
 
 namespace VividPanels;
 
-[Icon("preview")]
-[Category("UI")]
+[Icon( "preview" )]
+[Category( "UI" )]
 internal class VividPanelRenderer : Component, CameraComponent.ISceneCameraSetup
 {
 	public void SetupCamera( CameraComponent camera, SceneCamera sceneCamera )
@@ -15,25 +14,21 @@ internal class VividPanelRenderer : Component, CameraComponent.ISceneCameraSetup
 			if ( !Game.IsPlaying )
 				return;
 
-			var panels = Game.ActiveScene.GetAllComponents<VividPanel>().ToList();
+			var panels = camera.Scene.GetAllComponents<VividPanel>()?.ToList();
+			if ( !panels.Any() )
+				return;
 
 			panels.Sort( ( a, b ) =>
 			{
-				float dist0 = a.Source.Panel.Style.ZIndex.GetValueOrDefault();
-				float dist1 = b.Source.Panel.Style.ZIndex.GetValueOrDefault();
+				float dist0 = a?.Source?.Panel?.Style?.ZIndex ?? 0;
+				float dist1 = b?.Source?.Panel?.Style?.ZIndex ?? 0;
 
-				if ( dist0.AlmostEqual( dist1, 0.1f ) )
-					return 0;
-
-				if ( dist0 < dist1 )
-					return 1;
-
-				return -1;
+				return dist1.CompareTo( dist0 );
 			} );
 
 			foreach ( var panel in panels )
 			{
-				if ( panel.RenderDistance != 0f && Vector3.DistanceBetween( Scene.Camera.WorldPosition, panel.WorldPosition ) > panel.RenderDistance )
+				if ( !panel.RootPanel.IsValid() || panel.RenderDistance != 0f && Vector3.DistanceBetween( Scene.Camera.WorldPosition, panel.WorldPosition ) > panel.RenderDistance )
 				{
 					continue;
 				}
